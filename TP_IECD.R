@@ -17,45 +17,62 @@
 # Los outputs son:
 #  - intervalos: conjunto de los intervalos obtenidos, con estos mismos podemos graficar el cubrimiento
 library(ggplot2)
+library(dplyr)
+
 set.seed(786)
 
-intervalo = function(datos, n, alpha) {
+intervalo = function(datos, alpha) {
+  n = length(datos)
   t_p = mean(datos)
-  z_a = -qnorm(alpha)
+  z_a = -qnorm(alpha/2)
   return(c(inf = t_p - sqrt(t_p*(1-t_p)/n)*z_a, sup = t_p + sqrt(t_p*(1-t_p)/n)*z_a))
 }
 
 simulacion_1 = function(theta, n, alpha, N) {
-  intervalos = data.frame(
-    simulacion = 1:N, 
-    inf = numeric(N),
-    sup = numeric(N),
-    cubre = logical(N)
-  )
+  inf = numeric(N)
+  sup = numeric(N)
+  cubre = logical(N)
   
   for (i in 1:N) {
     muestras = rbinom(n, 1, theta)
-    int = intervalo(muestras, n, alpha)
-    intervalos$inf[i] = int[1]
-    intervalos$sup[i] = int[2]
-    intervalos$cubre[i] = theta >= int[1] && theta <= int[2]
+    int = intervalo(muestras, alpha)
+    inf[i] = int["inf"]
+    sup[i] = int["sup"]
+    cubre[i] = theta >= int["inf"] && theta <= int["sup"]
   }
   
-  return(intervalos)
+  return(data.frame(simulacion = 1:N, inf = inf, sup = sup, cubre = cubre))
 }
 
-intervalos_10 = simulacion_1(0.25, 10, 0.05, 1000)
+datos_totales <- data.frame()
 
-ggplot(intervalos_10, aes(y = simulacion, x = inf, xend = sup, color = cubre)) +
+for (i in c(5,10,25,50,100,500)) {
+  intervalos = simulacion_1(0.25, i, 0.05, 500)
+  
+  cob = mean(intervalos$cubre) * 100
+  intervalos$n = i
+  intervalos$n_label = paste0("n = ", i, "\n(Cob: ", cob, "%)")
+    
+  datos_totales = rbind(datos_totales, intervalos)
+}
+
+# Ordeno para que los graficos aparezcan de menor a mayor n
+datos_totales$n_label <- reorder(datos_totales$n_label, datos_totales$n)
+
+# Grafico en conjunto todos los datos
+ggplot(datos_totales, aes(y = simulacion, x = inf, xend = sup, color = cubre)) +
   
   # Dibujamos los intervalos obtenidos en la simulación
   geom_segment(aes(x = inf, xend = sup, yend = simulacion), linewidth = 1) +
-  
+    
   # La linea punteada es el valor real de theta
   geom_vline(xintercept = 0.25, linetype = "dashed", color = "black") +
   
-  # Color para identificar si cubre o no
+  # Color para identificar si cubre o no al valor real de theta
   scale_color_manual(values = c("#C51B7D", "#222222"), labels = c("No cubre", "Cubre")) +
+    
+  # Se separan los graficos en función de n
+  facet_wrap(~ n_label, scales = "free_x") +
   
   # Labels del grafico
   labs(
@@ -65,6 +82,10 @@ ggplot(intervalos_10, aes(y = simulacion, x = inf, xend = sup, color = cubre)) +
     color = "¿Cubre a 0.25?"
   ) +
   
-  theme_bw()
+  # Temas utilizados, fondo blanco.
+  theme_bw() +
+  theme(
+    strip.background = element_rect(fill = "white"), # Fondo blanco en los títulos de los paneles
+    strip.text = element_text(face = "bold") # Negrita en los títulos de los paneles
+  )
 
-sum(intervalos_10$cubre)/1000
