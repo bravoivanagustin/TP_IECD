@@ -14,6 +14,7 @@
 #  - N: cantidad de intervalos que vamos a generar
 # Los outputs son:
 #  - intervalos: conjunto de los intervalos obtenidos, con estos mismos podemos graficar el cubrimiento
+
 library(ggplot2)
 library(dplyr)
 
@@ -40,7 +41,7 @@ simulacion_1 = function(theta, n, alpha, N) {
   return(data.frame(simulacion = 1:N, inf = inf, sup = sup, cubre = cubre, centro = centro))
 }
 
-datos_totales <- data.frame()
+datos_totales = data.frame()
 
 for (i in c(5,10,25,50,100,500)) {
   intervalos = simulacion_1(0.25, i, 0.05, 100)
@@ -53,9 +54,9 @@ for (i in c(5,10,25,50,100,500)) {
 }
 
 # Ordeno para que los graficos aparezcan de menor a mayor n
-datos_totales$n_label <- reorder(datos_totales$n_label, datos_totales$n)
+datos_totales$n_label = reorder(datos_totales$n_label, datos_totales$n)
 
-medias_resumen <- datos_totales %>%
+medias_resumen = datos_totales %>%
   group_by(n_label) %>%
   summarise(media_del_centro = mean(centro))
 
@@ -94,3 +95,4 @@ ggplot(datos_totales, aes(y = simulacion, x = inf, xend = sup, color = cubre)) +
   )
 
 datos_totales
+
