@@ -1,6 +1,6 @@
 # --------------------- Trabajo practico IECD, simulaciones --------------------
 # Sección de comentarios:
-#  - LU mas chico entre los tres integrantes: 786
+#  - LU mas chico entre los tres integrantes: 64
 #  - La idea es modularizar lo mas posible el codigo
 #  - Vamos a intentar generalizar los procedimientos, para que sea simple cambiar los parametros que estan involucrados
 
@@ -18,7 +18,7 @@
 library(ggplot2)
 library(dplyr)
 
-set.seed(786)
+set.seed(64)
 
 simulacion_1 = function(theta, n, alpha, N) {
   inf = numeric(N)
