@@ -43,8 +43,8 @@ simulacion_1 = function(theta, n, alpha, N) {
 # Definicion de los intervalos
 datos_totales = data.frame()
 
-for (i in c(5,10,25,50,100,500,1000,5000,10000)) {
-  intervalos = simulacion_1(0.25, i, 0.05, 1000)
+for (i in c(3,5,10,25,50,100,500,1000,5000)) {
+  intervalos = simulacion_1(0.25, i, 0.05, 1000) # Theta = 0.25, alpha = 0.05
   
   cob = mean(intervalos$cubre) * 100
   intervalos$n = i
@@ -94,48 +94,44 @@ ggplot(datos_totales, aes(y = simulacion, x = inf, xend = sup, color = cubre)) +
     strip.text = element_text(face = "bold") # Negrita en los títulos de los paneles
   )
 
+
+
 # ------------------------------- Sección 2 ------------------------------------
-# Vamos a crear el metodo de la simulación requerida para la tercera sección del trabajo.
+# 
 #
-# Los inputs del metodo son:
-#  - theta: es el valor real para el cual vamos a hacer la simulacion
-#  - n: tamaño de la muestra
-#  - N: cantidad de intervalos que vamos a generar
-# Los outputs son:
-#  - intervalos: conjunto de los intervalos obtenidos, con estos mismos podemos graficar el cubrimiento
 
-  
-###########################################################################################################
-#2.9
- 
+# ----------------------------- Ejercicio 9 ------------------------------------
 
-N=5000 #Cantidad de muestras bootstrap a generar por cada n
-#Definimos los valores fijos dados en el ejercicio y distintos valores de n para realizar las simulaciones
-theta=0.25
-Se=0.9
-Sp=0.95
-#Definimos los valores de n
-ns=c(5, 10, 25, 50, 100, 500) 
+# Cantidad de muestras bootstrap a generar por cada n
+N = 1000
 
-#Defimos p
-p=Se*theta + (1-Sp)*(1-theta)
+# Definimos los valores fijos dados en el ejercicio
+theta = 0.25; Se = 0.9; Sp = 0.95
+
+# Definimos los valores de n para realizar las simulaciones
+ns = c(5, 10, 25, 50, 100, 500) 
+
+# Defimos p
+p = Se*theta + (1-Sp)*(1-theta)
 
 #Definimos el estimador de momentos de theta
-estimador_de_momentos=function(est_p, Se, Sp){
+estimador_de_momentos = function(est_p, Se, Sp){
   return((est_p+Sp-1)/(Se+Sp-1))
 }
-#Tomando como inputs:
-# - n: tamaño de la muestr
-# - Se, Sp, y p dados en el ejercicio
-# - el nivel del intervalo
-# - N la cantidad de muestras a genenar
-#Creamos intervalos de confianza percentil bootstrap
-ic_bootstrap_percentil_2_9=function(n, Se=0.9, Sp=0.95, p=p, nivel=0.05, N=5000){
-  estimadores_de_momentos=numeric(N)
-  muestra_2_9=rbinom(n, 1, p)
+
+# Tomando como inputs:
+#  - n: tamaño de la muestr
+#  - Se, Sp, y p dados en el ejercicio
+#  - el nivel del intervalo
+#  - N la cantidad de muestras a genenar
+# Creamos intervalos de confianza percentil bootstrap
+
+ic_bootstrap_percentil_2_9 = function(n, Se=0.9, Sp=0.95, p=p, nivel=0.05, N=5000){
+  estimadores_de_momentos = numeric(N)
+  muestra_2_9 = rbinom(n, 1, p)
   for (i in 1:N) {
     #muestra_2_9=rbinom(n, 1, p)
-    tboot=sample(muestra_2_9, n, replace = TRUE)
+    tboot = sample(muestra_2_9, n, replace = TRUE)
     est_p=mean(tboot)
     estimadores_de_momentos[i]=estimador_de_momentos(est_p, Se, Sp)
   }
@@ -144,32 +140,34 @@ ic_bootstrap_percentil_2_9=function(n, Se=0.9, Sp=0.95, p=p, nivel=0.05, N=5000)
   ic_bootstrap_perc=c(ic_bootstrap_perc_inf, ic_bootstrap_perc_sup)
   return(ic_bootstrap_perc)
 }
-#Creamos intervalos para cada n
+
+# Creamos intervalos para cada n
 for (n in ns){
   print(ic_bootstrap_percentil_2_9(n, Se, Sp, p, 0.05, N))
 }
     
-##########################################################################################################################################
-#2.10
-#Primero construimos los intervalos de confianza de nivel asintotico 0.95 para θ basados en ˆθMoM.
+# ----------------------------- Ejercicio 10 ------------------------------------
+
+# Construimos los intervalos de confianza de nivel asintotico 0.95 para θ basados en θMoM.
   ic_asintoticos_2_10=function(n, Se, Sp, p, nivel=0.05){
     muestra_2_10=rbinom(n, 1, p)
     est_p=mean(muestra_2_10)
     estimadores_de_momentos=estimador_de_momentos(est_p, Se, Sp)
     s=sqrt(est_p*(1-est_p))/(Se+Sp-1)
     z=qnorm(1 - nivel/2)
-    ic_asintoticos=c(inf =estimadores_de_momentos-z*sqrt(est_p*(1-est_p))/((Se+Sp-1)*sqrt(n)) , sup=estimadores_de_momentos+z*sqrt(est_p*(1-est_p))/((Se+Sp-1)*sqrt(n)))
+    ic_asintoticos=c(inf=estimadores_de_momentos-z*sqrt(est_p*(1-est_p))/((Se+Sp-1)*sqrt(n)) , sup=estimadores_de_momentos+z*sqrt(est_p*(1-est_p))/((Se+Sp-1)*sqrt(n)))
     return(ic_asintoticos)
   }
-#Creamos intervalos para cada n 
+
+# Creamos intervalos para cada n 
 for (n in ns){
   ic=ic_asintoticos_2_10(n,Se, Sp, p, 0.95)
 }
 
 
-########################################################################################################################################## 
-#2.11
-#Para comparar los intervalos definimos un data frame con información sobre ellos
+# ----------------------------- Ejercicio 11 ------------------------------------
+
+# Para comparar los intervalos definimos un data frame con información sobre ellos
 simulacion_2_11=function(theta, n, Se, Sp, p, nivel=0.05, B=100){
   intervalos_ip=data.frame(
     simulacion = 1:B,
@@ -312,10 +310,11 @@ ggplot(tabla_comparaciones, aes(x = variable, y = factor(n))) +
     axis.text.x = element_text(angle = 0, hjust = 0.5, size=8, face = "bold")
   )
 
-##################################################################################################
-#2.13
-#Definimos el estimador truncado
-estimador_truncado=function(estimador_momentos){
+# ----------------------------- Ejercicio 13 ------------------------------------
+
+
+# Definimos el estimador truncado
+estimador_truncado = function(estimador_momentos){
   if(estimador_momentos<0){
     return(0)
   }
@@ -329,7 +328,7 @@ estimador_truncado=function(estimador_momentos){
   }
 }
 
-caracteristicas_truncado=function(theta=0.25, n, Se=0.9, Sp=0.95,p,N=5000){
+caracteristicas_truncado=function(theta=0.25, n, Se=0.9, Sp=0.95, p, N=5000){
   est_truncado= numeric(N)
   for (i in 1:N){
     muestra_2_13=rbinom(n, 1, p)
@@ -350,8 +349,8 @@ caracteristicas_truncado=function(theta=0.25, n, Se=0.9, Sp=0.95,p,N=5000){
     dist_asint = dist_asint,
     est_truncado = est_truncado
   ))
-  
 }
+
 #Creamos un data frame que guarde para cada n los atributos de interes
 est_truncado_10=caracteristicas_truncado(0.25, 10, 0.9, 0.95, p, 5000)
 est_truncado_100=caracteristicas_truncado(0.25, 100, 0.9, 0.95, p, 5000)
@@ -402,32 +401,32 @@ ggplot(dist_asint_truncado, aes(sample = dist)) +
 # Utilizando los resultados del metodo se realizan graficos mostrando el cubrimiento
 #
 
-simulacion_3 = function(theta_pre, theta_post, n_pre, n_post, Se, Sp, alpha, N) {
+simulacion_3 = function(theta1, theta2, n1, n2, Se, Sp, alpha, N) {
   inf = numeric(N)
   sup = numeric(N)
   cubre = logical(N)
   centro = numeric(N)
   
   for (i in 1:N) {
-    delta = theta_post - theta_pre
+    delta = theta2 - theta1
     
-    p_pre = (Se+Sp-1)*theta_pre + (1-Sp)
-    p_post = (Se+Sp-1)*theta_post + (1-Sp)
+    p1 = (Se+Sp-1)*theta1 + (1-Sp)
+    p2 = (Se+Sp-1)*theta2 + (1-Sp)
     
-    muestras_pre = rbinom(n_pre, 1, p_pre)
-    muestras_post = rbinom(n_post, 1, p_post)
+    muestras1 = rbinom(n1, 1, p1)
+    muestras2 = rbinom(n2, 1, p2)
     
-    est_theta_pre = (mean(muestras_pre) + Sp - 1)/(Se + Sp - 1) 
-    est_theta_post = (mean(muestras_post) + Sp - 1)/(Se + Sp - 1)
+    est_theta1 = (mean(muestras1) + Sp - 1)/(Se + Sp - 1) 
+    est_theta2 = (mean(muestras2) + Sp - 1)/(Se + Sp - 1)
     
     z_a = qnorm(1 - alpha/2)
     
-    est_sigma_pre = mean(muestras_pre) * (1-mean(muestras_pre)) / ((Se+Sp-1)**2)
-    est_sigma_post = mean(muestras_post) * (1-mean(muestras_post)) / ((Se+Sp-1)**2)
+    est_sigma1 = mean(muestras1) * (1-mean(muestras1)) / ((Se+Sp-1)**2)
+    est_sigma2 = mean(muestras2) * (1-mean(muestras2)) / ((Se+Sp-1)**2)
     
-    inf[i] = est_theta_post - est_theta_pre - z_a * sqrt(est_sigma_post/n_post + est_sigma_pre/n_pre)
-    sup[i] = est_theta_post - est_theta_pre + z_a * sqrt(est_sigma_post/n_post + est_sigma_pre/n_pre)
-    centro[i] = est_theta_post - est_theta_pre
+    inf[i] = est_theta2 - est_theta1 - z_a * sqrt(est_sigma2/n2 + est_sigma1/n1)
+    sup[i] = est_theta2 - est_theta1 + z_a * sqrt(est_sigma2/n2 + est_sigma1/n1)
+    centro[i] = est_theta2 - est_theta1
     cubre[i] = delta >= inf[i] && delta <= sup[i]
   }
   
@@ -436,7 +435,7 @@ simulacion_3 = function(theta_pre, theta_post, n_pre, n_post, Se, Sp, alpha, N) 
 
 datos_totales_3 = data.frame()
 
-for (i in c(5,10,25,50,100,500,1000,5000,10000)) {
+for (i in c(3,5,10,25,50,100,500,1000,5000)) {
   intervalos = simulacion_3(0.2, 0.15, i, i, 0.9, 0.95, 0.05, 1000)
   
   cob = mean(intervalos$cubre) * 100
