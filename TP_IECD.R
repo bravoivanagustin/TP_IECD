@@ -347,16 +347,11 @@ ggplot(df_boot, aes(x = "", y = theta_est)) +
 # Cantidad de muestras bootstrap a generar por cada n
 N = 1000
 
-# Definimos los valores fijos dados en el ejercicio
-theta = 0.25; Se = 0.9; Sp = 0.95
-
 # Definimos los valores de n para realizar las simulaciones
 ns = c(5, 10, 25, 50, 100, 500) 
 
 # Defimos p
-p = Se*theta + (1-Sp)*(1-theta)
-# Defimos p
-p <- Se * theta + (1 - Sp) * (1 - theta)
+p_default <- Se_default * theta_default + (1 - Sp_default) * (1 - theta_default)
 
 #Definimos el estimador de momentos de theta
 estimador_de_momentos = function(est_p, Se, Sp){
@@ -370,52 +365,83 @@ estimador_de_momentos = function(est_p, Se, Sp){
 #  - N la cantidad de muestras a genenar
 # Creamos intervalos de confianza percentil bootstrap
 
-ic_bootstrap_percentil_2_9 = function(n, Se=0.9, Sp=0.95, p=p, nivel=0.05, N=1000){
-  estimadores_de_momentos = numeric(N)
-  muestra_2_9 = rbinom(n, 1, p)
+ic_bootstrap_percentil_2_9=function(n, Se=0.9, Sp=0.95, nivel=0.95, p_estimado,  N=5000){
+  estimadores_de_momentos=numeric(N)
   for (i in 1:N) {
-    # muestra_2_9=rbinom(n, 1, p)
-    tboot <- sample(muestra_2_9, n, replace = TRUE)
-    est_p <- mean(tboot)
-    estimadores_de_momentos[i] <- estimador_de_momentos(est_p, Se, Sp)
-    #muestra_2_9=rbinom(n, 1, p)
-    tboot = sample(muestra_2_9, n, replace = TRUE)
-    est_p=mean(tboot)
+    muestra_2_9=rbinom(n, 1, p_estimado)
+    est_p=mean(muestra_2_9)
     estimadores_de_momentos[i]=estimador_de_momentos(est_p, Se, Sp)
   }
-  ic_bootstrap_perc_inf <- quantile(estimadores_de_momentos, nivel / 2)
-  ic_bootstrap_perc_sup <- quantile(estimadores_de_momentos, 1 - nivel / 2)
-  ic_bootstrap_perc <- c(ic_bootstrap_perc_inf, ic_bootstrap_perc_sup)
+  ic_bootstrap_perc_inf=quantile(estimadores_de_momentos, (1-nivel)/2)
+  ic_bootstrap_perc_sup=quantile(estimadores_de_momentos,1-(1-nivel)/2)
+  ic_bootstrap_perc=c(ic_bootstrap_perc_inf, ic_bootstrap_perc_sup)
   return(ic_bootstrap_perc)
 }
 
-# Creamos intervalos para cada n
-for (n in ns){
-  print(ic_bootstrap_percentil_2_9(n, Se, Sp, p, 0.05, N))
+# Creamos intervalos para cada tamaño muestral y los visualizamos
+ic_percentil<-data.frame(n = ns, lower = NA, upper = NA)
+for (i in 1:length(ns)){
+  muestra_2_9=rbinom(ns[i], 1, p_default)
+  est=mean(muestra_2_9)
+  tita_estimado=estimador_de_momentos(est, Se_default, Sp_default)
+  p_estimado=Se_default*tita_estimado+(1-Sp_default)*(1-tita_estimado)
+  ic_perc <- ic_bootstrap_percentil_2_9(ns[i], Se_default, Sp_default, 0.95, p_estimado, N)
+  ic_percentil$lower[i] <- ic_perc[1]
+  ic_percentil$upper[i] <- ic_perc[2]
 }
+
+ggplot(ic_percentil, aes(x=n)) +
+  geom_segment(aes(x=n, xend=n, y=lower, yend=upper), color="blue") +
+  geom_point(aes(y=lower), color="blue") +
+  geom_point(aes(y=upper), color="blue") +
+  geom_hline(yintercept = 0.25, linetype = "dashed", color="black", linewidth=0.8) +
+  theme_minimal() +
+  scale_x_continuous(breaks = ns)+
+  labs(
+    x="Tamaño muestral",
+    y="Intervalo de confianza percentil de nivel 0.95",
+  )
+
 
 # ----------------------------- Ejercicio 10 ------------------------------------
 
 # Construimos los intervalos de confianza de nivel asintotico 0.95 para θ basados en θMoM.
-ic_asintoticos_2_10=function(n, Se, Sp, p, nivel=0.05){
-  muestra_2_10=rbinom(n, 1, p)
-  est_p=mean(muestra_2_10)
-  estimadores_de_momentos=estimador_de_momentos(est_p, Se, Sp)
-  s=sqrt(est_p*(1-est_p))/(Se+Sp-1)
-  z=qnorm(1 - nivel/2)
-  ic_asintoticos=c(inf=estimadores_de_momentos-z*sqrt(est_p*(1-est_p))/((Se+Sp-1)*sqrt(n)) , sup=estimadores_de_momentos+z*sqrt(est_p*(1-est_p))/((Se+Sp-1)*sqrt(n)))
+ic_asintoticos_2_10=function(muestra, n, Se, Sp, nivel=0.95){
+  est_p <- mean(muestra)
+  estimador_mom=estimador_de_momentos(est_p, Se, Sp)
+  s<-sqrt(est_p*(1-est_p))/(Se+Sp-1)
+  z<-qnorm(1 - (1-nivel)/2)
+  ic_asintoticos<-c(inf=estimador_mom-z*s/sqrt(n) , sup=estimador_mom+z*s/sqrt(n))
   return(ic_asintoticos)
 }
 
-# Creamos intervalos para cada n 
-for (n in ns){
-  ic=ic_asintoticos_2_10(n,Se, Sp, p, 0.95)
+#Graficamos los intervalos para cada tamaño muestral y los visualizamos
+ics_asintoticos<-data.frame(n = ns, lower = NA, upper = NA)
+for (i in 1:length(ns)){
+  muestra_2_10=rbinom(ns[i], 1, p_default)
+  ic_asint <- ic_asintoticos_2_10(muestra_2_10, ns[i], Se_default, Sp_default, 0.95)
+  ics_asintoticos$lower[i] <- ic_asint[1]
+  ics_asintoticos$upper[i] <- ic_asint[2]
+  ic_percentil$n[i]=ns[i]
 }
+
+ggplot(ics_asintoticos, aes(x=ns)) +
+  geom_segment(aes(x=n, xend=n, y=lower, yend=upper), color="blue") +
+  geom_point(aes(y=lower), color="blue") +
+  geom_point(aes(y=upper), color="blue") +
+  geom_hline(yintercept = 0.25, linetype = "dashed", color="black", size=0.8) +
+  theme_minimal() +
+  scale_x_continuous(breaks = ns)+
+  labs(
+    x="Tamaño muestral",
+    y="Intervalo de confianza asintotico de nivel 0.95",
+  )
+
 
 # ----------------------------- Ejercicio 11 ------------------------------------
 
 # Para comparar los intervalos definimos un data frame con información sobre ellos
-simulacion_2_11=function(theta, n, Se, Sp, p, nivel=0.05, B=100){
+simulacion_2_11=function(theta, n, Se, Sp, p, nivel=0.95, B=1000){
   
   intervalos_ip=data.frame(
     simulacion = 1:B,
@@ -436,62 +462,115 @@ simulacion_2_11=function(theta, n, Se, Sp, p, nivel=0.05, B=100){
   )
   
   for (i in 1:B){
-    ip = ic_bootstrap_percentil_2_9(n, Se, Sp,p,  nivel, N=100)
+    
+    muestra_2_11=rbinom(n, 1, p_default)
+    est=mean(muestra_2_11)
+    tita_estimado=estimador_de_momentos(est, Se_default, Sp_default)
+    p_estimado=Se_default*tita_estimado+(1-Sp_default)*(1-tita_estimado)
+    
+    ip = ic_bootstrap_percentil_2_9(n, Se_default, Sp_default, nivel,p_estimado, N=1000)
     intervalos_ip$inf[i] = ip[1]
     intervalos_ip$sup[i] = ip[2]
     intervalos_ip$cubre[i] = theta >= ip[1] && theta <= ip[2]
     intervalos_ip$long[i] =ip[2]-ip[1]
     
-    ic = ic_asintoticos_2_10(n, Se, Sp, p, nivel)
+    ic = ic_asintoticos_2_10(muestra_2_11, n, Se_default, Sp_default,  nivel)
     intervalos_ic$inf[i] = ic[1]
     intervalos_ic$sup[i] = ic[2]
     intervalos_ic$cubre[i] = theta >= ic[1] && theta <= ic[2]
     intervalos_ic$long[i] = ic[2]-ic[1]
   }
-  intervalos_ip_ic <- rbind(intervalos_ip, intervalos_ic)
-  return(intervalos_ip_ic)
+  return(list(intervalos_ip, intervalos_ic))
 }
+#Graficamos intervalos de confianza bootstrap percentil para analizar el porcentaje de cobertura de cada tamaño muestral
+datos_2_11_ip=data.frame()
+datos_2_11_asint=data.frame()
 
+#Creamos dataframes para guardar los intervalos de cada tipo para los diferentes tamaños muestrales
 
-
-datos_2_11=data.frame()
-
+datos_2_11_ip=data.frame()
+datos_2_11_asint=data.frame()
 for (n in ns){
-  intervalos_n=simulacion_2_11(theta, n, Se, Sp, p, 0.05, 100)
-  intervalos_n$n = n
-  intervalos_n$n_label = paste0("n = ", n)
+  simulaciones=simulacion_2_11(theta_default, n, Se_default, Sp_default, p_default, 0.95, 1000)
+  intervalos_ip=simulaciones[[1]]
+  cob = mean(intervalos_ip$cubre) * 100
+  intervalos_ip$n = n
+  intervalos_ip$n_label = paste0("n = ",n, "\n(Cob: ", cob, "%)")
+  datos_2_11_ip = rbind(datos_2_11_ip, intervalos_ip)
   
-  datos_2_11 = rbind(datos_2_11, intervalos_n)
+  intervalos_asint=simulaciones[[2]]
+  cob = mean(intervalos_asint$cubre) * 100
+  intervalos_asint$n = n
+  intervalos_asint$n_label = paste0("n = ",n, "\n(Cob: ", cob, "%)")
+  datos_2_11_asint = rbind(datos_2_11_asint, intervalos_asint)
 }
-
+#Graficamos intervalos de confianza bootstrap percentil para analizar el porcentaje de cobertura de cada tamaño muestral
 # Ordeno para que los graficos aparezcan de menor a mayor n
-datos_2_11$n_label <- reorder(datos_2_11$n_label, datos_2_11$n)
-datos_2_11$centro <- (datos_2_11$inf + datos_2_11$sup) / 2
+datos_2_11_ip$n_label = reorder(datos_2_11_ip$n_label, datos_2_11_ip$n)
+
+medias_resumen = datos_2_11_ip %>%
+  group_by(n_label) 
 
 # Grafico en conjunto todos los datos
-ggplot(datos_2_11, aes(y = simulacion, x = inf, xend = sup, color = cubre)) +
-
+ggplot(datos_2_11_ip, aes(y = simulacion, x = inf, xend = sup, color = cubre)) +
+  
   # Dibujamos los intervalos obtenidos en la simulación
   geom_segment(aes(x = inf, xend = sup, yend = simulacion), linewidth = 1) +
-
+  
   # La linea punteada negra es el valor real de theta
   geom_vline(xintercept = 0.25, linetype = "dashed", color = "black") +
-
-
+  
   # Color para identificar si cubre o no al valor real de theta
   scale_color_manual(values = c("#C51B7D", "#222222"), labels = c("No cubre", "Cubre")) +
-
-  # Se separan los graficos en función de n y en que tipo de intervalos son
-  facet_grid(tipo ~ n_label, scales = "free_x") +
-
+  
+  # Se separan los graficos en función de n
+  facet_wrap(~ n_label, scales = "free_x") +
+  
   # Labels del grafico
   labs(
-    title = "Intervalos de confianza bootstrap percentil vs asintóticos",
     x = "Valor del parámetro",
     y = "Simulación n°",
     color = "¿Cubre a 0.25?"
   ) +
+  
+  # Temas utilizados, fondo blanco.
+  theme_bw() +
+  theme(
+    strip.background = element_rect(fill = "white"), # Fondo blanco en los títulos de los paneles
+    strip.text = element_text(face = "bold") # Negrita en los títulos de los paneles
+  )
 
+#Graficamos intervalos de confianza asintoticos para analizar el porcentaje de cobertura de cada n
+
+
+# Ordeno para que los graficos aparezcan de menor a mayor n
+datos_2_11_asint$n_label = reorder(datos_2_11_asint$n_label, datos_2_11_asint$n)
+
+medias_resumen = datos_2_11_asint %>%
+  group_by(n_label) 
+
+# Grafico en conjunto todos los datos
+ggplot(datos_2_11_asint, aes(y = simulacion, x = inf, xend = sup, color = cubre)) +
+  
+  # Dibujamos los intervalos obtenidos en la simulación
+  geom_segment(aes(x = inf, xend = sup, yend = simulacion), linewidth = 1) +
+  
+  # La linea punteada negra es el valor real de theta
+  geom_vline(xintercept = 0.25, linetype = "dashed", color = "black") +
+  
+  # Color para identificar si cubre o no al valor real de theta
+  scale_color_manual(values = c("#C51B7D", "#222222"), labels = c("No cubre", "Cubre")) +
+  
+  # Se separan los graficos en función de n
+  facet_wrap(~ n_label, scales = "free_x") +
+  
+  # Labels del grafico
+  labs(
+    x = "Valor del parámetro",
+    y = "Simulación n°",
+    color = "¿Cubre a 0.25?"
+  ) +
+  
   # Temas utilizados, fondo blanco.
   theme_bw() +
   theme(
@@ -500,34 +579,42 @@ ggplot(datos_2_11, aes(y = simulacion, x = inf, xend = sup, color = cubre)) +
   )
 
 # Comparamos las longitudes promedios y porcentajes de cobertura para cada n
+datos_2_11=rbind(datos_2_11_ip, datos_2_11_asint)
 comparaciones <- datos_2_11 %>%
-  group_by(n_label, tipo) %>%
+  group_by(n, tipo) %>%
   summarise(
     longitud_promedio = mean(long),
     cobertura = mean(cubre) * 100
-  )
+  ) %>%
+  mutate(n_label = paste0("n = ", n))
+comparaciones$n_label = reorder(comparaciones$n_label, comparaciones$n)
+
 
 ggplot(comparaciones, aes(x = n_label, y = longitud_promedio, fill = tipo)) +
   geom_col(position = "dodge") +
   labs(
-    title = "Longitud promedio de los intervalos",
     x = "Tamaño muestral (n)",
     y = "Longitud promedio"
   ) +
-  theme_bw()
+  theme_bw() +
+  theme(    legend.position = c(0.8, 0.7),
+            legend.background = element_rect(fill = "white", color = "black"))
 
 ggplot(comparaciones, aes(x = n_label, y = cobertura, fill = tipo)) +
   geom_col(position = "dodge") +
   labs(
-    title = "Cobertura (%) por método",
     x = "Tamaño muestral (n)",
     y = "Porcentaje de cobertura (%)"
   ) +
-  theme_bw()
+  ylim(0, 130) +
+  theme_bw() +
+  theme(    legend.position = c(0.8, 0.9),
+            legend.background = element_rect(fill = "white", color = "black")) 
 
-# Ahora hacemos una tabla comparativa
 
-comparaciones <- datos_2_11 %>%
+# Armamos una tabla comparativa para visualizar mejor las diferencias
+
+comparaciones_tabla <- datos_2_11 %>%
   group_by(n, tipo) %>%
   summarise(
     longitud_promedio = mean(long),
@@ -542,18 +629,18 @@ comparaciones <- datos_2_11 %>%
     long_prom_percentil     = longitud_promedio[tipo == "Bootstrap percentil"]
   )
 tabla_comparaciones <- data.frame(
-  n = comparaciones$n,
+  n = comparaciones_tabla$n,
   variable = rep(c(
     "Cobertura asintótico",
     "Cobertura percentil",
     "Long. prom. asintótico",
     "Long. prom. percentil"
-  ), each = length(comparaciones$n)),
+  ), each = length(comparaciones_tabla$n)),
   valor = c(
-    comparaciones$cobertura_asintotico,
-    comparaciones$cobertura_percentil,
-    comparaciones$long_prom_asintotico,
-    comparaciones$long_prom_percentil
+    comparaciones_tabla$cobertura_asintotico,
+    comparaciones_tabla$cobertura_percentil,
+    comparaciones_tabla$long_prom_asintotico,
+    comparaciones_tabla$long_prom_percentil
   )
 )
 
@@ -564,8 +651,7 @@ ggplot(tabla_comparaciones, aes(x = variable, y = factor(n))) +
   scale_x_discrete(position = "top") +
   labs(
     x = "",
-    y = "n",
-    title = "Coberturas y longitudes promedio"
+    y = "Tamaño muestral (n)",
   ) +
   theme_bw() +
   theme(
@@ -573,59 +659,95 @@ ggplot(tabla_comparaciones, aes(x = variable, y = factor(n))) +
     axis.text.x = element_text(angle = 0, hjust = 0.5, size = 8, face = "bold")
   )
 
+
 # ----------------------------- Ejercicio 13 ------------------------------------
 
 
+
 # Definimos el estimador truncado
-estimador_truncado = function(estimador_momentos){
-  if(estimador_momentos<0){
+estimador_truncado = function(estimador_mom){
+  if(estimador_mom<0){
     return(0)
   } else {
-    if (estimador_momentos > 1) {
+    if (estimador_mom > 1) {
       return(1)
     } else {
-      return(estimador_momentos)
+      return(estimador_mom)
     }
   }
 }
 
-caracteristicas_truncado <- function(theta = 0.25, n, Se = 0.9, Sp = 0.95, p, N = 5000) {
+caracteristicas_truncado <- function(theta = 0.25, n, Se = 0.9, Sp = 0.95, p_est, N = 1000) {
   est_truncado= numeric(N)
   for (i in 1:N){
-    muestra_2_13=rbinom(n, 1, p)
-    est_p=mean(muestra_2_13)
-    estimador_momentos=estimador_de_momentos(est_p, Se, Sp)
-    estimador__mom_truncado=estimador_truncado(estimador_momentos)
-    est_truncado[i]=estimador__mom_truncado
+    muestra = rbinom(n, 1, p_est)
+    est_p = mean(muestra)
+    estimador_mom = estimador_de_momentos(est_p, Se, Sp)
+    est_truncado[i] = estimador_truncado(estimador_mom)
   }
   # Guardamos los datos que queremos analizar
-  varianza <- var(est_truncado)
-  sesgo <- mean(est_truncado) - theta
-  ECM <- varianza - (sesgo)**2 # Compromiso sesgo - Varianza
-  dist_asint <- sqrt(n) * (est_truncado - theta)
+  varianza = var(est_truncado)
+  sesgo = mean(est_truncado) - theta
+  ECM = varianza + sesgo^2
+  dist_asint = sqrt(n) * (est_truncado - theta)
+  
   return(list(
     varianza = varianza,
     sesgo = sesgo,
     ECM = ECM,
-    dist_asint = dist_asint,
-    est_truncado = est_truncado
+    dist_asint = dist_asint
   ))
 }
 
 # Creamos un data frame que guarde para cada n los atributos de interes
-est_truncado_10=caracteristicas_truncado(0.25, 10, 0.9, 0.95, p, 5000)
-est_truncado_100=caracteristicas_truncado(0.25, 100, 0.9, 0.95, p, 5000)
-est_truncado_1000=caracteristicas_truncado(0.25, 1000, 0.9, 0.95, p, 5000)
 # Visualizamos los valores obtenidos de la varianza, sesgo y ECM para n = 10, 100, 1000
-Var_ECM_Sesgo_truncado=data.frame(
-  n = rep(c(10, 100, 1000), times = 3),
-  variable = rep(c("Varianza", "Sesgo", "ECM"), each = 3),
-  value = c(
-    est_truncado_10$varianza, est_truncado_100$varianza, est_truncado_1000$varianza,
-    est_truncado_10$sesgo, est_truncado_100$sesgo, est_truncado_1000$sesgo,
-    est_truncado_10$ECM, est_truncado_100$ECM, est_truncado_1000$ECM
-  )
+Var_ECM_Sesgo_truncado = data.frame(
+  n = numeric(0),
+  variable = character(0),
+  value = numeric(0),
+  stringsAsFactors = FALSE
 )
+#n=10
+muestra_2_13_10 <- rbinom(10, 1, p_default)
+est=mean(muestra_2_13_10)
+tita_estimado=estimador_de_momentos(est, Se_default, Sp_default)
+tita_estimado_trunc=estimador_truncado(tita_estimado)
+p_estimado = Se_default * tita_estimado_trunc + (1 - Sp_default) * (1 - tita_estimado_trunc)
+Var_ECM_Sesgo_truncado_10 <- caracteristicas_truncado(theta_default, 10, Se_default, Sp_default, p_estimado, 1000)
+Var_ECM_Sesgo_truncado <- rbind(
+  Var_ECM_Sesgo_truncado,
+  data.frame(n = 10, variable = "varianza", value = Var_ECM_Sesgo_truncado_10$varianza),
+  data.frame(n = 10, variable = "sesgo", value = Var_ECM_Sesgo_truncado_10$sesgo),
+  data.frame(n = 10, variable = "ECM", value = Var_ECM_Sesgo_truncado_10$ECM)
+)
+
+#n=100
+muestra_2_13_100 <- rbinom(100, 1, p_default)
+est=mean(muestra_2_13_100)
+tita_estimado=estimador_de_momentos(est, Se_default, Sp_default)
+tita_estimado_trunc=estimador_truncado(tita_estimado)
+p_est=Se_default*tita_estimado_trunc+(1-Sp_default)*(1-tita_estimado_trunc)
+Var_ECM_Sesgo_truncado_100 <- caracteristicas_truncado(theta_default, 100, Se_default,Sp_default, p_est, 1000)
+Var_ECM_Sesgo_truncado <- rbind(
+  Var_ECM_Sesgo_truncado,
+  data.frame(n = 100, variable = "varianza", value = Var_ECM_Sesgo_truncado_100$varianza),
+  data.frame(n = 100, variable = "sesgo", value = Var_ECM_Sesgo_truncado_100$sesgo),
+  data.frame(n = 100, variable = "ECM", value = Var_ECM_Sesgo_truncado_100$ECM))
+
+#n=1000
+muestra_2_13_1000 <- rbinom(1000, 1, p_default)
+est=mean(muestra_2_13_1000)
+tita_estimado=estimador_de_momentos(est, Se_default, Sp_default)
+tita_estimado_trunc=estimador_truncado(tita_estimado)
+p_est=Se_default*tita_estimado_trunc+(1-Sp_default)*(1-tita_estimado_trunc)
+Var_ECM_Sesgo_truncado_1000 <- caracteristicas_truncado(theta_default, 1000, Se_default, Sp_default, p_est, 1000)
+Var_ECM_Sesgo_truncado <- rbind(
+  Var_ECM_Sesgo_truncado,
+  data.frame(n = 1000, variable = "varianza", value = Var_ECM_Sesgo_truncado_1000$varianza),
+  data.frame(n = 1000, variable = "sesgo", value = Var_ECM_Sesgo_truncado_1000$sesgo),
+  data.frame(n = 1000, variable = "ECM", value = Var_ECM_Sesgo_truncado_1000$ECM))
+
+#Visualizamos mediante un gráfico los valores de la varianza, sesgo y el ECM
 
 ggplot(Var_ECM_Sesgo_truncado, aes(x = n, y = value, color = variable)) +
   geom_line(linewidth = 1) +
@@ -633,24 +755,33 @@ ggplot(Var_ECM_Sesgo_truncado, aes(x = n, y = value, color = variable)) +
   scale_x_log10(breaks = c(10, 100, 1000)) +
   labs(
     title = "Sesgo, Varianza y ECM del estimador truncado",
-    x = "n ", y = "Valor", color = "Medida"
+    x = "n", y = "Valor", color = "Medida"
   ) +
- theme_minimal(base_size = 14)
-
+  theme_minimal(base_size = 14)
 
 # Visualizamos la distribucion asintotica con qqplot
-dist_asint_truncado=data.frame(
-  dist = c(est_truncado_10$dist_asint,
-           est_truncado_100$dist_asint,
-           est_truncado_1000$dist_asint),
-  n = factor(rep(c(10,100,1000), each = 5000))
+dist_asint_truncado = data.frame(
+  dist = c(Var_ECM_Sesgo_truncado_10$dist_asint,
+           Var_ECM_Sesgo_truncado_100$dist_asint,
+           Var_ECM_Sesgo_truncado_1000$dist_asint),
+  n = factor(rep(c(10, 100, 1000), each = length(Var_ECM_Sesgo_truncado_10$dist_asint)))
 )
 
 ggplot(dist_asint_truncado, aes(sample = dist)) +
   stat_qq() +
   stat_qq_line(color = "red", linewidth = 1) +
   facet_wrap(~n, scales = "free") +
-  labs(title = "Distribución asintótica del estimador de momentos truncado") +
+  labs(title = "Distribución asintótica del estimador truncado") +
+  theme_minimal(base_size = 14)
+
+#Visualizamos como se ve la distribución asintótica con un histograma
+ggplot(dist_asint_truncado, aes(x = dist)) +
+  geom_histogram(bins = 30, color = "black", fill = "skyblue") +
+  facet_wrap(~n, scales = "free") +
+  labs(
+    x = "Distribución asintótica",
+    y = "Frecuencia"
+  ) +
   theme_minimal(base_size = 14)
 
 
