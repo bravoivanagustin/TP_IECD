@@ -53,7 +53,10 @@ for (i in c(3,5,10,25,50,100,500,1000,5000)) {
 }
 
 # Ordeno para que los graficos aparezcan de menor a mayor n
+
 datos_totales$n_label <- reorder(datos_totales$n_label, datos_totales$n)
+
+# ------------------ Grafico para los intervalos -------------------------------
 
 medias_resumen <- datos_totales %>%
   group_by(n_label) %>%
@@ -62,36 +65,93 @@ medias_resumen <- datos_totales %>%
 # Grafico en conjunto todos los datos
 ggplot(datos_totales, aes(y = simulacion, x = inf, xend = sup, color = cubre)) +
   
-  # Dibujamos los intervalos obtenidos en la simulación
+  # 1. Intervalos
   geom_segment(aes(x = inf, xend = sup, yend = simulacion), linewidth = 1) +
   
-  # La linea punteada negra es el valor real de theta
-  geom_vline(xintercept = 0.25, linetype = "dashed", color = "green") +
+  # 2. Línea Verde (Theta Real)
+  # Mapeamos linetype dentro de aes() para que cree leyenda
+  geom_vline(aes(xintercept = 0.25, linetype = "Theta = 0.25"), 
+             color = "green", linewidth = 0.9) +
   
-  # La linea solida azul es la media del punto medio de los intervalos para cada n
-  geom_vline(
-    data = medias_resumen, aes(xintercept = media_del_centro),
-    color = "blue", linetype = "solid", linewidth = 0.7, alpha = 0.6
+  # 3. Línea Azul (Media calculada)
+  # Mapeamos linetype dentro de aes() para que cree leyenda
+  geom_vline(data = medias_resumen, 
+             aes(xintercept = media_del_centro, linetype = "Media de los centros"),
+             color = "blue", linewidth = 0.7, alpha = 0.6) +
+  
+  # 4. Configuración de la leyenda de las líneas (Referencias)
+  scale_linetype_manual(
+    name = NULL, # Título de la leyenda
+    values = c("Theta = 0.25" = "dashed", "Media de los centros" = "solid")
   ) +
   
-  # Color para identificar si cubre o no al valor real de theta
-  scale_color_manual(values = c("#C51B7D", "#222222"), labels = c("No cubre a theta = 0.25", "Cubre a theta = 0.25")) +
+  # 5. Colores de intervalos
+  scale_color_manual(
+    name = NULL,
+    values = c("#C51B7D", "#222222"), 
+    labels = c("No cubre a theta = 0.25", "Cubre a theta =  0.25")
+  ) +
   
-  # Se separan los graficos en función de n
+  # 6. Truco para que las líneas en la leyenda tengan color verde/azul
+  # (Por defecto saldrían negras porque el color está fijo fuera de aes)
+  guides(
+    linetype = guide_legend(
+      override.aes = list(color = c("blue", "green")) # Orden alfabético: Media (azul), Theta (verde)
+    )
+  ) +
+  
   facet_wrap(~n_label, scales = "free_x") +
   
-  # Labels del grafico
   labs(
     x = "Theta",
-    y = "Simulación n°",
-    color = NULL
+    y = "Simulación n°"
   ) +
   
-  # Temas utilizados, fondo blanco.
   theme_bw() +
   theme(
-    strip.background = element_rect(fill = "white"), # Fondo blanco en los títulos de los paneles
-    strip.text = element_text(face = "bold") # Negrita en los títulos de los paneles
+    strip.background = element_rect(fill = "white"),
+    strip.text = element_text(face = "bold")
+  )
+
+# ------------------- Grafico de longitud media --------------------------------
+
+resumen_longitud <- datos_totales %>%
+  mutate(longitud = sup - inf) %>%   # Calculamos largo de cada intervalo
+  group_by(n) %>%                    # Agrupamos por tamaño de muestra
+  summarise(
+    longitud_media = mean(longitud)  # Promedio
+  )
+
+# 2. Graficamos
+ggplot(resumen_longitud, aes(x = n, y = longitud_media, group = 1)) +
+  
+  # Línea que conecta los puntos
+  geom_line(color = "steelblue", linewidth = 1) +
+  
+  # Puntos destacados
+  geom_point(color = "#C51B7D", size = 3) +
+  
+  # Etiquetas con el valor exacto sobre cada punto (opcional, ayuda a leer)
+  geom_text(aes(label = round(longitud_media, 3)), 
+            vjust = -0.8, color = "black", fontface = "bold", size = 3.5) +
+  
+  scale_x_log10() +
+  
+  # Escalas y etiquetas
+  labs(
+    x = "n",
+    y = "Longitud media de los intervalos"
+  ) +
+  
+  # Ajuste del eje Y para que no corte las etiquetas de arriba
+  scale_y_continuous(expand = expansion(mult = c(0.05, 0.15))) +
+  
+  # Tema estético (manteniendo el estilo que usabas antes)
+  theme_bw() +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    axis.text = element_text(color = "black"),
+    panel.grid.minor = element_blank() # Limpiamos lineas menores para que sea más claro
   )
 
 # ------------------------------- Sección 2 ------------------------------------
@@ -849,6 +909,9 @@ for (i in c(3,5,10,25,50,100,500,1000,5000)) {
   
   intervalos = simulacion_3(0.2, 0.15, k, j, Se_default, Sp_default, 0.05, 1000)
   
+  # Se eligieron n_pre y n_post distintos, pero de manera que se cumplan los supuestos propuestos
+  # cuando tienden a infinito
+  
   cob = mean(intervalos$cubre) * 100
   intervalos$n = i
   intervalos$n_label = paste0("n_pre = ", k, "\n n_post = ", j, "\n(Cob: ", cob, "%)")
@@ -865,37 +928,52 @@ medias_resumen_3 <- datos_totales_3 %>%
 
 # Grafico en conjunto todos los datos
 ggplot(datos_totales_3, aes(y = simulacion, x = inf, xend = sup, color = cubre)) +
-
-  # Dibujamos los intervalos obtenidos en la simulación
+  
+  # 1. Intervalos
   geom_segment(aes(x = inf, xend = sup, yend = simulacion), linewidth = 1) +
-
-  # La linea punteada negra es el valor real de theta
-  geom_vline(xintercept = -0.05, linetype = "dashed", color = "green") +
-
-  # La linea solida azul es la media del punto medio de los intervalos para cada n
-  geom_vline(
-    data = medias_resumen_3, aes(xintercept = media_del_centro),
-    color = "blue", linetype = "solid", linewidth = 0.7, alpha = 0.6
+  
+  # 2. Línea Verde (Delta Real)
+  # CORREGIDO: El label coincide con el valor (-0.05) y con el scale_linetype
+  geom_vline(aes(xintercept = -0.05, linetype = "Delta = -0.05"), 
+             color = "green", linewidth = 0.9) +
+  
+  # 3. Línea Azul (Media calculada)
+  geom_vline(data = medias_resumen_3, 
+             aes(xintercept = media_del_centro, linetype = "Media de los centros"),
+             color = "blue", linewidth = 0.7, alpha = 0.6) +
+  
+  # 4. Configuración de la leyenda de las líneas (Referencias)
+  scale_linetype_manual(
+    name = NULL,
+    values = c("Delta = -0.05" = "dashed", "Media de los centros" = "solid")
   ) +
-
-  # Color para identificar si cubre o no al valor real de theta
-  scale_color_manual(values = c("#C51B7D", "#222222"), labels = c("No cubre a delta = -0.05", "Cubre a delta = -0.05")) +
-
-  # Se separan los graficos en función de n
+  
+  # 5. Colores de intervalos (Esto se mantiene igual)
+  scale_color_manual(
+    name = NULL,
+    values = c("#C51B7D", "#222222"), 
+    labels = c("No cubre a delta = -0.05", "Cubre a delta = -0.05")
+  ) +
+  
+  # 6. Colores en orden para las etiquetas
+  guides(
+    linetype = guide_legend(
+      override.aes = list(color = c("green", "blue")) 
+    )
+  ) +
+  
   facet_wrap(~n_label, scales = "free_x") +
-
-  # Labels del grafico
+  
   labs(
-    # title = "Intervalos de confianza asintoticos para delta = -0.05",
     x = "Delta",
-    y = "Simulación n°",
-    color = NULL
+    y = "Simulación n°"
   ) +
-
-  # Temas utilizados, fondo blanco.
+  
   theme_bw() +
+  
   theme(
-    strip.background = element_rect(fill = "white"), # Fondo blanco en los títulos de los paneles
-    strip.text = element_text(face = "bold") # Negrita en los títulos de los paneles
+    strip.background = element_rect(fill = "white"),
+    strip.text = element_text(face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 0.8)
   )
 
