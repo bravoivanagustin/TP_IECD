@@ -7,16 +7,14 @@
 library(ggplot2)
 library(dplyr)
 
+Se_default <- 0.9
+Sp_default <- 0.95
+theta_default <- 0.25
+
 # ------------------------------- Sección 1 ------------------------------------
 # Vamos a crear el metodo de la simulación requerida para la primera sección del trabajo.
 #
-# Los inputs del metodo son:
-#  - theta: prevalencia
-#  - n: tamaño de la muestra
-#  - alpha: uno menos el nivel que queremos alcanzar
-#  - N: cantidad de intervalos que vamos a generar
-# Los outputs son:
-#  - intervalos: conjunto de los intervalos obtenidos, con estos mismos podemos graficar el cubrimiento
+
 set.seed(64)
 
 # Funcion de simulacion
@@ -63,33 +61,32 @@ medias_resumen <- datos_totales %>%
 
 # Grafico en conjunto todos los datos
 ggplot(datos_totales, aes(y = simulacion, x = inf, xend = sup, color = cubre)) +
-
+  
   # Dibujamos los intervalos obtenidos en la simulación
   geom_segment(aes(x = inf, xend = sup, yend = simulacion), linewidth = 1) +
-
+  
   # La linea punteada negra es el valor real de theta
-  geom_vline(xintercept = 0.25, linetype = "dashed", color = "black") +
-
+  geom_vline(xintercept = 0.25, linetype = "dashed", color = "green") +
+  
   # La linea solida azul es la media del punto medio de los intervalos para cada n
   geom_vline(
     data = medias_resumen, aes(xintercept = media_del_centro),
     color = "blue", linetype = "solid", linewidth = 0.7, alpha = 0.6
   ) +
-
+  
   # Color para identificar si cubre o no al valor real de theta
-  scale_color_manual(values = c("#C51B7D", "#222222"), labels = c("No cubre", "Cubre")) +
-
+  scale_color_manual(values = c("#C51B7D", "#222222"), labels = c("No cubre a theta = 0.25", "Cubre a theta = 0.25")) +
+  
   # Se separan los graficos en función de n
   facet_wrap(~n_label, scales = "free_x") +
-
+  
   # Labels del grafico
   labs(
-    title = "Intervalos de confianza asintoticos para theta = 0.25",
-    x = "Valor del parámetro",
+    x = "Theta",
     y = "Simulación n°",
-    color = "¿Cubre a 0.25?"
+    color = NULL
   ) +
-
+  
   # Temas utilizados, fondo blanco.
   theme_bw() +
   theme(
@@ -100,19 +97,6 @@ ggplot(datos_totales, aes(y = simulacion, x = inf, xend = sup, color = cubre)) +
 # ------------------------------- Sección 2 ------------------------------------
 
 # Vamos a crear el metodo de la simulación requerida para la segunda sección del trabajo.
-#
-# Los inputs del metodo son:
-#  - theta: es el valor real para el cual vamos a hacer la simulacion
-#  - n: tamaño de la muestra
-#  - N: cantidad de intervalos que vamos a generar
-# Los outputs son:
-#  - intervalos: conjunto de los intervalos obtenidos, con estos mismos podemos graficar el cubrimiento
-
-
-# Parámetros fijos para los ejercicios
-Se_default <- 0.9
-Sp_default <- 0.95
-theta_default <- 0.25
 
 # ----------------------------- Ejercicio 3 ------------------------------------
 
@@ -233,7 +217,7 @@ mom_results <- run_mom_simulation(n_sims, theta_default, Se_default, Sp_default)
 df_ecm_punto6 <- data.frame(
   n = rep(mom_results$n, 2),
   ecm = c(mom_results$ecm_theo, mom_results$ecm_perf),
-  tipo = rep(c("MoM Teórico (Imperfecto)", "Test Perfecto (Ideal)"), each = nrow(mom_results))
+  tipo = rep(c("Test imperfecto", "Test perfecto"), each = nrow(mom_results))
 )
 
 ggplot(df_ecm_punto6, aes(x = n, y = ecm, color = tipo, linetype = tipo)) +
@@ -242,11 +226,20 @@ ggplot(df_ecm_punto6, aes(x = n, y = ecm, color = tipo, linetype = tipo)) +
   scale_y_log10() +
   scale_x_log10() +
   labs(
-    title = "Comparación de ECM: Test Imperfecto vs Perfecto",
-    y = "ECM (Escala Log)",
-    x = "Tamaño de Muestra n (Escala Log)"
+    y = "log(ECM)",
+    x = "log(n)",
+    # Eliminar el título de la leyenda para color y linetype
+    color = NULL,
+    linetype = NULL
   ) +
-  theme_bw()
+  theme_bw() +
+  theme(
+    # Mover la leyenda dentro del gráfico (coordenadas 0 a 1)
+    # Por ejemplo, (0.8, 0.2) es la esquina inferior derecha
+    legend.position = c(0.8, 0.8),
+    # Opcional: añade un fondo para que sea más legible
+    legend.background = element_rect(fill = "white", color = "black")
+  )
 
 # Versión sin escala logarítmica
 ggplot(df_ecm_punto6, aes(x = n, y = ecm, color = tipo, linetype = tipo)) +
@@ -642,7 +635,7 @@ ggplot(Var_ECM_Sesgo_truncado, aes(x = n, y = value, color = variable)) +
     title = "Sesgo, Varianza y ECM del estimador truncado",
     x = "n ", y = "Valor", color = "Medida"
   ) +
-  theme_minimal(base_size = 14)
+ theme_minimal(base_size = 14)
 
 
 # Visualizamos la distribucion asintotica con qqplot
@@ -675,8 +668,6 @@ ggplot(dist_asint_truncado, aes(sample = dist)) +
 #  - N: cantidad de intervalos que vamos a generar
 # Los outputs son:
 #  - intervalos: conjunto de los intervalos obtenidos, con estos mismos podemos graficar el cubrimiento
-#
-# Utilizando los resultados del metodo se realizan graficos mostrando el cubrimiento
 #
 
 simulacion_3 = function(theta1, theta2, n1, n2, Se, Sp, alpha, N) {
@@ -725,11 +716,11 @@ for (i in c(3,5,10,25,50,100,500,1000,5000)) {
   k = sample(range_to_sample, 1)
   j = sample(range_to_sample, 1)
   
-  intervalos = simulacion_3(0.2, 0.15, k, j, 0.9, 0.95, 0.05, 1000)
+  intervalos = simulacion_3(0.2, 0.15, k, j, Se_default, Sp_default, 0.05, 1000)
   
   cob = mean(intervalos$cubre) * 100
   intervalos$n = i
-  intervalos$n_label = paste0("n_pre = ", k, ", n_post = ", j, "\n(Cob: ", cob, "%)")
+  intervalos$n_label = paste0("n_pre = ", k, "\n n_post = ", j, "\n(Cob: ", cob, "%)")
   
   datos_totales_3 = rbind(datos_totales_3, intervalos)
 }
@@ -748,7 +739,7 @@ ggplot(datos_totales_3, aes(y = simulacion, x = inf, xend = sup, color = cubre))
   geom_segment(aes(x = inf, xend = sup, yend = simulacion), linewidth = 1) +
 
   # La linea punteada negra es el valor real de theta
-  geom_vline(xintercept = -0.05, linetype = "dashed", color = "black") +
+  geom_vline(xintercept = -0.05, linetype = "dashed", color = "green") +
 
   # La linea solida azul es la media del punto medio de los intervalos para cada n
   geom_vline(
@@ -757,7 +748,7 @@ ggplot(datos_totales_3, aes(y = simulacion, x = inf, xend = sup, color = cubre))
   ) +
 
   # Color para identificar si cubre o no al valor real de theta
-  scale_color_manual(values = c("#C51B7D", "#222222"), labels = c("No cubre", "Cubre")) +
+  scale_color_manual(values = c("#C51B7D", "#222222"), labels = c("No cubre a delta = -0.05", "Cubre a delta = -0.05")) +
 
   # Se separan los graficos en función de n
   facet_wrap(~n_label, scales = "free_x") +
@@ -765,9 +756,9 @@ ggplot(datos_totales_3, aes(y = simulacion, x = inf, xend = sup, color = cubre))
   # Labels del grafico
   labs(
     # title = "Intervalos de confianza asintoticos para delta = -0.05",
-    x = "Valor del parámetro",
+    x = "Delta",
     y = "Simulación n°",
-    color = "¿Cubre a -0.05?"
+    color = NULL
   ) +
 
   # Temas utilizados, fondo blanco.
