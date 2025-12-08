@@ -178,7 +178,6 @@ df_theta <- data.frame(
 ggplot(df_theta, aes(x = theta, y = p)) +
   geom_line(color = "blue", linewidth = 1) +
   labs(
-    title = "p vs Prevalencia (theta)",
     subtitle = paste("Se =", Se_default, ", Sp =", Sp_default),
     x = "Theta",
     y = "Probabilidad p"
@@ -196,7 +195,6 @@ df_Se <- data.frame(
 ggplot(df_Se, aes(x = Se, y = p)) +
   geom_line(color = "red", linewidth = 1) +
   labs(
-    title = "p vs Sensibilidad (Se)",
     subtitle = paste("Theta =", theta_default, ", Sp =", Sp_default),
     x = "Sensibilidad",
     y = "Probabilidad p"
@@ -214,7 +212,6 @@ df_Sp <- data.frame(
 ggplot(df_Sp, aes(x = Sp, y = p)) +
   geom_line(color = "green", linewidth = 1) +
   labs(
-    title = "p vs Especificidad (Sp)",
     subtitle = paste("Theta =", theta_default, ", Se =", Se_default),
     x = "Especificidad",
     y = "Probabilidad p"
@@ -295,7 +292,6 @@ ggplot(df_ecm_punto6, aes(x = n, y = ecm, color = tipo, linetype = tipo)) +
   theme_bw() +
   theme(
     # Mover la leyenda dentro del gráfico (coordenadas 0 a 1)
-    # Por ejemplo, (0.8, 0.2) es la esquina inferior derecha
     legend.position = c(0.8, 0.8),
     # Opcional: añade un fondo para que sea más legible
     legend.background = element_rect(fill = "white", color = "black")
@@ -306,7 +302,6 @@ ggplot(df_ecm_punto6, aes(x = n, y = ecm, color = tipo, linetype = tipo)) +
   geom_line(linewidth = 1) +
   geom_point() +
   labs(
-    title = "Comparación de ECM: Test Imperfecto vs Perfecto (Escala Lineal)",
     y = "ECM",
     x = "Tamaño de Muestra n"
   ) +
@@ -323,8 +318,6 @@ ggplot(mom_results, aes(x = n, y = bias_emp)) +
   geom_point(size = 2, color = "blue") +
   scale_x_log10(breaks = n_sims) +
   labs(
-    title = "Validación: Sesgo del Estimador (Bias) vs n",
-    subtitle = "Se espera que oscile alrededor de 0",
     y = "Sesgo Empírico",
     x = "Tamaño de Muestra n (Escala Log)"
   ) +
@@ -345,8 +338,6 @@ ggplot(df_val, aes(x = n, y = val, color = metric, shape = metric)) +
   scale_x_log10(breaks = n_sims) +
   scale_y_log10() +
   labs(
-    title = "Validación: Ajuste Empírico vs Teórico",
-    subtitle = "Los puntos deben caer sobre la línea",
     y = "ECM (Escala Log)",
     x = "Tamaño de Muestra n (Escala Log)"
   ) +
