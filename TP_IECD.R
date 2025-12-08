@@ -258,7 +258,7 @@ run_mom_simulation <- function(n_values, theta, Se, Sp, R = 1000) {
       ecm_emp = ecm_emp,
       ecm_theo = ecm_theo,
       ecm_perf = ecm_perf
-    ))
+    )) 
   }
   return(results)
 }
@@ -430,16 +430,16 @@ ic_bootstrap_percentil_2_9 <- function(n, Se = 0.9, Sp = 0.95, nivel = 0.95, p_e
 # Creamos intervalos para cada n
 ic_percentil <- data.frame(n = ns, inf = NA, sup = NA)
 for (i in 1:length(ns)) {
-  muestra_2_9 <- rbinom(ns[i], 1, p_default)
-  est <- mean(muestra_2_9)
-  tita_estimado <- estimador_de_momentos(est, Se_default, Sp_default)
-  p_estimado <- Se_default * tita_estimado + (1 - Sp_default) * (1 - tita_estimado)
   n_intervalo_b_perc <- data.frame(
     n = numeric(100),
     sup = numeric(100),
     inf = numeric(100)
   )
   for (j in 1:100) {
+    muestra_2_9 <- rbinom(ns[i], 1, p_default)
+    est <- mean(muestra_2_9)
+    tita_estimado <- estimador_de_momentos(est, Se_default, Sp_default)
+    p_estimado <- Se_default * tita_estimado + (1 - Sp_default) * (1 - tita_estimado)
     ic_perc <- ic_bootstrap_percentil_2_9(ns[i], Se_default, Sp_default, 0.95, p_estimado, N)
     n_intervalo_b_perc$n[j] <- ns[i]
     n_intervalo_b_perc$inf[j] <- ic_perc[1]
@@ -505,19 +505,21 @@ ic_asintoticos_2_10 <- function(muestra, n, Se, Sp, nivel = 0.95) {
 # Creamos intervalos para cada n
 ics_asintoticos <- data.frame(n = ns, inf = NA, sup = NA)
 for (i in 1:length(ns)) {
-  muestra_2_10 <- rbinom(ns[i], 1, p_default)
+ 
   n_intervalo_asint <- data.frame(
     n = numeric(100),
     sup = numeric(100),
     inf = numeric(100)
   )
-  ic_asint <- ic_asintoticos_2_10(muestra_2_10, ns[i], Se_default, Sp_default, 0.95)
-  n_intervalo_asint$n[i] <- ns[i]
-  n_intervalo_asint$inf[i] <- ic_asint[1]
-  n_intervalo_asint$sup[i] <- ic_asint[2]
-  ics_asintoticos <- rbind(ics_asintoticos, n_intervalo_asint)
+  for (j in 1:100) {
+    muestra_2_10 <- rbinom(ns[i], 1, p_default)
+    ic_asint <- ic_asintoticos_2_10(muestra_2_10, ns[i], Se_default, Sp_default, 0.95)
+    n_intervalo_asint$n[j] <- ns[i]
+    n_intervalo_asint$inf[j] <- ic_asint[1]
+    n_intervalo_asint$sup[j] <- ic_asint[2]
+    ics_asintoticos <- rbind(ics_asintoticos, n_intervalo_asint)
+  }
 }
-
 
 
 
@@ -555,7 +557,7 @@ ggplot(ic_promedio_asint, aes(x = n)) +
   scale_x_log10(breaks = ns, labels = ns) +
   labs(
     x = "n",
-    y = "IC bootstrap percentil promedio de nivel 0.95"
+    y = "IC asintóticos promedio de nivel 0.95"
   ) +
   theme_bw() +
   theme(
