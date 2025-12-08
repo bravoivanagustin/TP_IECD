@@ -2,3 +2,5 @@
 .RHistory
 *.png
 Rplots.pdf
+.Rproj.user
+.Rproj.user/
