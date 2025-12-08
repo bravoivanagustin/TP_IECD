@@ -110,7 +110,8 @@ ggplot(datos_totales, aes(y = simulacion, x = inf, xend = sup, color = cubre)) +
   theme_bw() +
   theme(
     strip.background = element_rect(fill = "white"),
-    strip.text = element_text(face = "bold")
+    strip.text = element_text(face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
   )
 
 # ------------------- Grafico de longitud media --------------------------------
@@ -178,7 +179,6 @@ df_theta <- data.frame(
 ggplot(df_theta, aes(x = theta, y = p)) +
   geom_line(color = "blue", linewidth = 1) +
   labs(
-    subtitle = paste("Se =", Se_default, ", Sp =", Sp_default),
     x = "Theta",
     y = "Probabilidad p"
   ) +
@@ -195,7 +195,6 @@ df_Se <- data.frame(
 ggplot(df_Se, aes(x = Se, y = p)) +
   geom_line(color = "red", linewidth = 1) +
   labs(
-    subtitle = paste("Theta =", theta_default, ", Sp =", Sp_default),
     x = "Sensibilidad",
     y = "Probabilidad p"
   ) +
@@ -212,7 +211,6 @@ df_Sp <- data.frame(
 ggplot(df_Sp, aes(x = Sp, y = p)) +
   geom_line(color = "green", linewidth = 1) +
   labs(
-    subtitle = paste("Theta =", theta_default, ", Se =", Se_default),
     x = "Especificidad",
     y = "Probabilidad p"
   ) +
@@ -355,7 +353,7 @@ denom_mom <- Se_default + Sp_default - 1
 theta_mom_obs <- (t_bar_obs + Sp_default - 1) / denom_mom
 
 # Bootstrap Loop
-B <- 1000
+B <- 10000
 boot_ests <- numeric(B)
 
 for (i in 1:B) {
@@ -369,7 +367,7 @@ for (i in 1:B) {
 df_boot <- data.frame(theta_est = boot_ests)
 
 ggplot(df_boot, aes(x = theta_est)) +
-  geom_histogram(aes(y = after_stat(density)), bins = 15, fill = "lightblue", color = "black", alpha = 0.7) +
+  geom_histogram(aes(y = after_stat(density)), bins = 10, fill = "lightblue", color = "black", alpha = 0.7) +
   geom_vline(xintercept = theta_mom_obs, color = "red", linetype = "dashed", linewidth = 1) +
   labs(
     x = "Estimador MoM Bootstrap",
@@ -427,13 +425,18 @@ ic_bootstrap_percentil_2_9 <- function(n, Se = 0.9, Sp = 0.95, nivel = 0.95, p_e
 
 # ----------------------------- Grafico para los intervalos ------------------------------------
 
-# Creamos intervalos para cada n
-ic_percentil <- data.frame(n = ns, inf = NA, sup = NA)
-for (i in 1:length(ns)) {
-  n_intervalo_b_perc <- data.frame(
-    n = numeric(100),
-    sup = numeric(100),
-    inf = numeric(100)
+# Creamos intervalos para cada n 
+ic_percentil<-data.frame(n = ns, inf = NA, sup = NA)
+
+for (i in 1:length(ns)){
+  muestra_2_9=rbinom(ns[i], 1, p_default)
+  est=mean(muestra_2_9)
+  tita_estimado=estimador_de_momentos(est, Se_default, Sp_default)
+  p_estimado=Se_default*tita_estimado+(1-Sp_default)*(1-tita_estimado)
+  n_intervalo_b_perc=data.frame(
+    n=numeric(100),
+    sup=numeric(100),
+    inf=numeric(100)
   )
   for (j in 1:100) {
     muestra_2_9 <- rbinom(ns[i], 1, p_default)
@@ -520,8 +523,6 @@ for (i in 1:length(ns)) {
     ics_asintoticos <- rbind(ics_asintoticos, n_intervalo_asint)
   }
 }
-
-
 
 # ----------------------------- Grafico para los intervalos ------------------------------------
 
@@ -672,9 +673,7 @@ ggplot(datos_2_11_ip, aes(y = simulacion, x = inf, xend = sup, color = cubre)) +
     strip.text = element_text(face = "bold")
   )
 
-
-# Graficamos intervalos de confianza asintoticos para analizar el porcentaje de cobertura de cada n
-
+#Graficamos intervalos de confianza asintoticos para analizar el porcentaje de cobertura de cada n
 
 # Ordenamos para que los graficos aparezcan de menor a mayor n
 datos_2_11_asint$n_label <- reorder(datos_2_11_asint$n_label, datos_2_11_asint$n)
@@ -984,7 +983,6 @@ for (i in c(3, 5, 10, 25, 50, 100, 500, 1000, 5000)) {
   datos_test_3 <- rbind(datos_test_3, resultados)
 }
 
-# Resumen para ver si se acerca a 0.05
 resumen_nivel <- datos_test_3 %>%
   group_by(n_suma) %>%
   summarise(nivel_empirico = mean(rechazo))
