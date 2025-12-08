@@ -11,11 +11,11 @@ Se_default <- 0.9
 Sp_default <- 0.95
 theta_default <- 0.25
 
+set.seed(64)
+
 # ------------------------------- Sección 1 ------------------------------------
 # Vamos a crear el metodo de la simulación requerida para la primera sección del trabajo.
 #
-
-set.seed(64)
 
 # Funcion de simulacion
 simulacion_1 <- function(theta, n, alpha, N) {
@@ -230,9 +230,9 @@ run_mom_simulation <- function(n_values, theta, Se, Sp, R = 1000) {
 
   for (n in n_values) {
     # 1. Simulación (Empírico)
-    # Genera R conteos totales de positivos directamente (suma de n Bernoullis)
+    # Genera R conteos totales de positivos directamente (suma de n Bernoullis)  
     X <- rbinom(R, n, p_true)
-    # Convierte conteos a proporciones (equivalente a mean de ceros y unos)
+    # Convierte conteos a proporciones (equivalente a mean de ceros y unos) 
     T_bar <- X / n
 
     # Estimador MoM
@@ -283,8 +283,8 @@ ggplot(df_ecm_punto6, aes(x = n, y = ecm, color = tipo, linetype = tipo)) +
   scale_y_log10() +
   scale_x_log10() +
   labs(
-    y = "log(ECM)",
-    x = "log(n)",
+    y = "ECM",
+    x = "n",
     # Eliminar el título de la leyenda para color y linetype
     color = NULL,
     linetype = NULL
@@ -296,14 +296,14 @@ ggplot(df_ecm_punto6, aes(x = n, y = ecm, color = tipo, linetype = tipo)) +
     # Opcional: añade un fondo para que sea más legible
     legend.background = element_rect(fill = "white", color = "black")
   )
-
+  
 # Versión sin escala logarítmica
 ggplot(df_ecm_punto6, aes(x = n, y = ecm, color = tipo, linetype = tipo)) +
   geom_line(linewidth = 1) +
   geom_point() +
   labs(
     y = "ECM",
-    x = "Tamaño de Muestra n"
+    x = "n"
   ) +
   theme_bw()
 
@@ -319,7 +319,7 @@ ggplot(mom_results, aes(x = n, y = bias_emp)) +
   scale_x_log10(breaks = n_sims) +
   labs(
     y = "Sesgo Empírico",
-    x = "Tamaño de Muestra n (Escala Log)"
+    x = "n"
   ) +
   theme_bw()
 
@@ -329,7 +329,7 @@ ggsave("validacion_bias.png", plot = g_bias, width = 6, height = 4)
 df_val <- data.frame(
   n = rep(mom_results$n, 2),
   val = c(mom_results$ecm_emp, mom_results$ecm_theo),
-  metric = rep(c("Empírico (Simulado)", "Teórico (Fórmula)"), each = nrow(mom_results))
+  metric = rep(c("Empírico", "Teórico"), each = nrow(mom_results))
 )
 
 ggplot(df_val, aes(x = n, y = val, color = metric, shape = metric)) +
@@ -338,11 +338,11 @@ ggplot(df_val, aes(x = n, y = val, color = metric, shape = metric)) +
   scale_x_log10(breaks = n_sims) +
   scale_y_log10() +
   labs(
-    y = "ECM (Escala Log)",
-    x = "Tamaño de Muestra n (Escala Log)"
+    y = "ECM",
+    x = "n"
   ) +
   theme_bw() +
-  theme(legend.position = "bottom")
+  theme(legend.position = c(0.8, 0.8))
 
 # ----------------------------- Ejercicio 8 ------------------------------------
 
@@ -372,10 +372,8 @@ ggplot(df_boot, aes(x = theta_est)) +
   geom_histogram(aes(y = after_stat(density)), bins = 15, fill = "lightblue", color = "black", alpha = 0.7) +
   geom_vline(xintercept = theta_mom_obs, color = "red", linetype = "dashed", linewidth = 1) +
   labs(
-    title = paste("Distribución Bootstrap (n =", n_boot, ")"),
-    subtitle = paste("Centrada en Theta_obs =", round(theta_mom_obs, 3)),
     x = "Estimador MoM Bootstrap",
-    y = "Densidad"
+    y = "Frecuencia"
   ) +
   theme_bw()
 
@@ -386,8 +384,6 @@ ggplot(df_boot, aes(x = "", y = theta_est)) +
   geom_hline(yintercept = theta_mom_obs, color = "red", linetype = "dashed", linewidth = 1) +
   geom_hline(yintercept = 0.25, color = "blue", linetype = "dotted", linewidth = 1) +
   labs(
-    title = "Boxplot Bootstrap",
-    subtitle = "Rojo: Theta Obs | Azul: Theta Real (0.25)",
     y = "Estimador MoM Bootstrap",
     x = ""
   ) +
@@ -487,7 +483,6 @@ ggplot(ic_promedio, aes(x = n)) +
   theme_bw() +
   theme(legend.position = c(0.9, 0.8),
         legend.background = element_rect(fill = "white", color = "black")) 
-
 
 
 # ----------------------------- Ejercicio 10 ------------------------------------
@@ -909,28 +904,15 @@ ggplot(dist_asint_truncado, aes(x = dist)) +
 # ------------------------------- Sección 3 ------------------------------------
 # Vamos a crear un metodo de simulación requerida para la tercera sección del trabajo.
 #
-# Los inputs del metodo son:
-#  - theta1: prevalencia previa
-#  - theta2: prevalencia posterior
-#  - n1: tamaño de la muestra previa
-#  - n2: tamaño de la muestra posterior
-#  - Se: sensibilidad del test
-#  - SP: especificidad del test
-#  - alpha: uno menos el nivel que queremos alcanzar
-#  - N: cantidad de intervalos que vamos a generar
-# Los outputs son:
-#  - intervalos: conjunto de los intervalos obtenidos, con estos mismos podemos graficar el cubrimiento
-#
 
-simulacion_3 = function(theta1, theta2, n1, n2, Se, Sp, alpha, N) {
-  inf = numeric(N)
-  sup = numeric(N)
-  cubre = logical(N)
-  centro = numeric(N)
+simulacion_test = function(theta1, theta2, n1, n2, Se, Sp, alpha, N) {
+  rechazo = logical(N)
+  estadistico = numeric(N)
+  
+  # Valor crítico Z para dos colas (1.96 para alpha 0.05)
+  z_critico = qnorm(1 - alpha/2) 
   
   for (i in 1:N) {
-    delta = theta2 - theta1
-    
     p1 = (Se+Sp-1)*theta1 + (1-Sp)
     p2 = (Se+Sp-1)*theta2 + (1-Sp)
     
@@ -940,101 +922,86 @@ simulacion_3 = function(theta1, theta2, n1, n2, Se, Sp, alpha, N) {
     est_theta1 = (mean(muestras1) + Sp - 1)/(Se + Sp - 1) 
     est_theta2 = (mean(muestras2) + Sp - 1)/(Se + Sp - 1)
     
-    z_a = qnorm(1 - alpha/2)
+    # Estimación de la varianza (parte del numerador de la varianza asintótica)
+    term_sigma1 = mean(muestras1) * (1-mean(muestras1)) / ((Se+Sp-1)**2)
+    term_sigma2 = mean(muestras2) * (1-mean(muestras2)) / ((Se+Sp-1)**2)
     
-    est_sigma1 = mean(muestras1) * (1-mean(muestras1)) / ((Se+Sp-1)**2)
-    est_sigma2 = mean(muestras2) * (1-mean(muestras2)) / ((Se+Sp-1)**2)
+    # Error Estándar (Denominador del test)
+    # Nota: Agregamos un pequeño epsilon o manejo de error por si term_sigma es 0
+    denominador = sqrt(term_sigma2/n2 + term_sigma1/n1)
     
-    inf[i] = est_theta2 - est_theta1 - z_a * sqrt(est_sigma2/n2 + est_sigma1/n1)
-    sup[i] = est_theta2 - est_theta1 + z_a * sqrt(est_sigma2/n2 + est_sigma1/n1)
-    centro[i] = est_theta2 - est_theta1
-    cubre[i] = delta >= inf[i] && delta <= sup[i]
+    if(denominador == 0) {
+      # Si la varianza es 0 (ej. todos 0 o todos 1), el estadístico no está definido.
+      # En estos casos extremos no se rechaza H0 por falta de evidencia de variabilidad.
+      estadistico[i] = 0 
+    } else {
+      estadistico[i] = abs(est_theta2 - est_theta1) / denominador
+    }
+    
+    # Decisión del Test: Rechazo si el estadístico > 1.96
+    rechazo[i] = estadistico[i] > z_critico
   }
-
-  return(data.frame(simulacion = 1:N, inf = inf, sup = sup, cubre = cubre, centro = centro))
+  
+  return(data.frame(simulacion = 1:N, rechazo = rechazo, estadistico = estadistico))
 }
 
-datos_totales_3 <- data.frame()
+datos_test_3 <- data.frame()
 
 for (i in c(3,5,10,25,50,100,500,1000,5000)) {
-  # Limites del conjunto de enteros
-  min_val = ceiling(3/4 * i)
-  max_val = floor(5/4 * i)
-  
-  # Definir el conjunto de enteros a muestrear
+  min_val = ceiling(3/4 * i)+1
+  max_val = floor(5/4 * i)-1
   range_to_sample = min_val:max_val
   
-  # Muestrear k y j independientemente (1 valor cada uno)
   k = sample(range_to_sample, 1)
   j = sample(range_to_sample, 1)
   
-  intervalos = simulacion_3(0.2, 0.15, k, j, Se_default, Sp_default, 0.05, 1000)
   
-  # Se eligieron n_pre y n_post distintos, pero de manera que se cumplan los supuestos propuestos
-  # cuando tienden a infinito
+  # Usamos 0.2 y 0.2 para que H_0 sea verdadera.
+  resultados = simulacion_test(0.2, 0.2, k, j, Se_default, Sp_default, 0.05, 1000)
   
-  cob = mean(intervalos$cubre) * 100
-  intervalos$n = i
-  intervalos$n_label = paste0("n_pre = ", k, "\n n_post = ", j, "\n(Cob: ", cob, "%)")
+  # Calculamos la proporción de rechazos (Nivel Empírico)
+  prop_rechazo = mean(resultados$rechazo)
   
-  datos_totales_3 = rbind(datos_totales_3, intervalos)
+  resultados$n = i
+  resultados$n_suma = k + j
+  resultados$n_label = paste0("Total = ", k+j, "\n(Nivel: ", round(prop_rechazo, 3), ")")
+  
+  datos_test_3 = rbind(datos_test_3, resultados)
 }
 
-# Ordeno para que los graficos aparezcan de menor a mayor n
-datos_totales_3$n_label <- reorder(datos_totales_3$n_label, datos_totales_3$n)
+# Resumen para ver si se acerca a 0.05
+resumen_nivel <- datos_test_3 %>%
+  group_by(n_suma) %>%
+  summarise(nivel_empirico = mean(rechazo))
 
-medias_resumen_3 <- datos_totales_3 %>%
-  group_by(n_label) %>%
-  summarise(media_del_centro = mean(centro))
+print(resumen_nivel)
 
 # Grafico en conjunto todos los datos
-ggplot(datos_totales_3, aes(y = simulacion, x = inf, xend = sup, color = cubre)) +
+ggplot(resumen_nivel, aes(x = n_suma, y = nivel_empirico)) +
+  geom_hline(yintercept = 0.05, linetype = "dashed", color = "red", linewidth = 1) +
   
-  # 1. Intervalos
-  geom_segment(aes(x = inf, xend = sup, yend = simulacion), linewidth = 1) +
+  # Etiqueta de la línea roja
+  annotate("text", 
+           x = min(resumen_nivel$n_suma), 
+           y = 0.05, 
+           label = "Nivel 0.05", 
+           color = "red", 
+           vjust = -1, 
+           hjust = 0, 
+           fontface = "bold") + # Esta es la negrita del label "Nivel 0.05"
   
-  # 2. Línea Verde (Delta Real)
-  # CORREGIDO: El label coincide con el valor (-0.05) y con el scale_linetype
-  geom_vline(aes(xintercept = -0.05, linetype = "Delta = -0.05"), 
-             color = "green", linewidth = 0.9) +
+  geom_line(color = "steelblue", size = 1) +
+  geom_point(color = "blue", size = 3) +
   
-  # 3. Línea Azul (Media calculada)
-  geom_vline(data = medias_resumen_3, 
-             aes(xintercept = media_del_centro, linetype = "Media de los centros"),
-             color = "blue", linewidth = 0.7, alpha = 0.6) +
-  
-  # 4. Configuración de la leyenda de las líneas (Referencias)
-  scale_linetype_manual(
-    name = NULL,
-    values = c("Delta = -0.05" = "dashed", "Media de los centros" = "solid")
-  ) +
-  
-  # 5. Colores de intervalos (Esto se mantiene igual)
-  scale_color_manual(
-    name = NULL,
-    values = c("#C51B7D", "#222222"), 
-    labels = c("No cubre a delta = -0.05", "Cubre a delta = -0.05")
-  ) +
-  
-  # 6. Colores en orden para las etiquetas
-  guides(
-    linetype = guide_legend(
-      override.aes = list(color = c("green", "blue")) 
-    )
-  ) +
-  
-  facet_wrap(~n_label, scales = "free_x") +
+  scale_x_log10(breaks = unique(resumen_nivel$n_suma)) +
   
   labs(
-    x = "Delta",
-    y = "Simulación n°"
+    x = "N",
+    y = "Nivel empírico"
   ) +
-  
   theme_bw() +
-  
   theme(
     strip.background = element_rect(fill = "white"),
-    strip.text = element_text(face = "bold"),
-    axis.text.x = element_text(angle = 45, hjust = 0.8)
+    strip.text = element_text(face = "bold")
   )
 
