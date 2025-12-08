@@ -323,7 +323,6 @@ ggplot(mom_results, aes(x = n, y = bias_emp)) +
   ) +
   theme_bw()
 
-ggsave("validacion_bias.png", plot = g_bias, width = 6, height = 4)
 
 # 2. Gráfico Ajuste ECM -> Demuestra que la teoría coincide con la simulación
 df_val <- data.frame(
@@ -392,7 +391,7 @@ ggplot(df_boot, aes(x = "", y = theta_est)) +
 # ----------------------------- Ejercicio 9 ------------------------------------
 
 # Cantidad de muestras bootstrap a generar por cada n
-N = 1000
+N = 500
 
 # Definimos los valores de n para realizar las simulaciones
 ns = c(3,5,10,25,50,100,500,1000,5000) 
@@ -412,7 +411,7 @@ estimador_de_momentos = function(est_p, Se, Sp){
 #  - N la cantidad de muestras a genenar
 # Creamos intervalos de confianza percentil bootstrap
 
-ic_bootstrap_percentil_2_9=function(n, Se=0.9, Sp=0.95, nivel=0.95, p_estimado,  N=1000){
+ic_bootstrap_percentil_2_9=function(n, Se=0.9, Sp=0.95, nivel=0.95, p_estimado,  N=500){
   estimadores_de_momentos=numeric(N)
   for (i in 1:N) {
     muestra_2_9=rbinom(n, 1, p_estimado)
@@ -487,7 +486,7 @@ ggplot(ic_promedio, aes(x = n)) +
 
 # ----------------------------- Ejercicio 10 ------------------------------------
 
-# Construimos los intervalos de confianza de nivel asintotico 0.95 para θ basados en θMoM.
+# Construimos los intervalos de confianza asintóticos de nivel 0.95 para θ basados en θMoM.
 
 ic_asintoticos_2_10=function(muestra, n, Se, Sp, nivel=0.95){
   est_p <- mean(muestra)
@@ -506,20 +505,21 @@ for (i in 1:length(ns)){
     n=numeric(100),
     sup=numeric(100),
     inf=numeric(100)
+    
   )
-  for (j in 1:100){
-    ic_asint <- ic_asintoticos_2_10(muestra_2_10, ns[i], Se_default, Sp_default, 0.95)
-    n_intervalo_asint$n[j]=ns[i]
-    n_intervalo_asint$inf[j] <- ic_asint[1]
-    n_intervalo_asint$sup[j] <- ic_asint[2]
+  ic_asint <- ic_asintoticos_2_10(muestra_2_10, ns[i], Se_default, Sp_default, 0.95)
+  n_intervalo_asint$n[i]=ns[i]
+  n_intervalo_asint$inf[i] <- ic_asint[1]
+  n_intervalo_asint$sup[i] <- ic_asint[2]
+    ics_asintoticos=rbind(ics_asintoticos,n_intervalo_asint)
   }
-  ics_asintoticos=rbind(ics_asintoticos,n_intervalo_asint)
+
   
-}
+
 
 # ----------------------------- Grafico para los intervalos ------------------------------------
 
-# Graficamos los intervalos bootstrap percentil promedio de nive 0.95 obtenidos para cada n
+# Graficamos los intervalos asintóticos de nive 0.95 obtenidos para cada n
 ic_promedio_asint <- ics_asintoticos %>%
   filter(!is.na(inf)) %>% 
   group_by(n) %>%
@@ -558,7 +558,7 @@ ggplot(ic_promedio_asint, aes(x = n)) +
 # ----------------------------- Ejercicio 11 ------------------------------------
 
 # Para comparar los intervalos definimos un data frame con información sobre ellos
-simulacion_2_11=function(theta, n, Se, Sp, p, nivel=0.95, B=1000){
+simulacion_2_11=function(theta, n, Se, Sp, p, nivel=0.95, B=500){
   
   intervalos_ip=data.frame(
     simulacion = 1:B,
@@ -585,7 +585,7 @@ simulacion_2_11=function(theta, n, Se, Sp, p, nivel=0.95, B=1000){
     tita_estimado=estimador_de_momentos(est, Se_default, Sp_default)
     p_estimado=Se_default*tita_estimado+(1-Sp_default)*(1-tita_estimado)
     
-    ip = ic_bootstrap_percentil_2_9(n, Se_default, Sp_default, nivel,p_estimado, N=1000)
+    ip = ic_bootstrap_percentil_2_9(n, Se_default, Sp_default, nivel,p_estimado, N=500)
     intervalos_ip$inf[i] = ip[1]
     intervalos_ip$sup[i] = ip[2]
     intervalos_ip$cubre[i] = theta >= ip[1] && theta <= ip[2]
@@ -610,7 +610,7 @@ datos_2_11_asint=data.frame()
 datos_2_11_ip=data.frame()
 datos_2_11_asint=data.frame()
 for (n in ns){
-  simulaciones=simulacion_2_11(theta_default, n, Se_default, Sp_default, p_default, 0.95, 1000)
+  simulaciones=simulacion_2_11(theta_default, n, Se_default, Sp_default, p_default, 0.95, 500)
   intervalos_ip=simulaciones[[1]]
   cob = mean(intervalos_ip$cubre) * 100
   intervalos_ip$n = n
