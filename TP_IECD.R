@@ -110,8 +110,7 @@ ggplot(datos_totales, aes(y = simulacion, x = inf, xend = sup, color = cubre)) +
   theme_bw() +
   theme(
     strip.background = element_rect(fill = "white"),
-    strip.text = element_text(face = "bold"),
-    axis.text.x = element_text(angle = 45, hjust = 1)
+    strip.text = element_text(face = "bold")
   )
 
 # ------------------- Grafico de longitud media --------------------------------
@@ -179,6 +178,7 @@ df_theta <- data.frame(
 ggplot(df_theta, aes(x = theta, y = p)) +
   geom_line(color = "blue", linewidth = 1) +
   labs(
+    subtitle = paste("Se =", Se_default, ", Sp =", Sp_default),
     x = "Theta",
     y = "Probabilidad p"
   ) +
@@ -195,6 +195,7 @@ df_Se <- data.frame(
 ggplot(df_Se, aes(x = Se, y = p)) +
   geom_line(color = "red", linewidth = 1) +
   labs(
+    subtitle = paste("Theta =", theta_default, ", Sp =", Sp_default),
     x = "Sensibilidad",
     y = "Probabilidad p"
   ) +
@@ -211,6 +212,7 @@ df_Sp <- data.frame(
 ggplot(df_Sp, aes(x = Sp, y = p)) +
   geom_line(color = "green", linewidth = 1) +
   labs(
+    subtitle = paste("Theta =", theta_default, ", Se =", Se_default),
     x = "Especificidad",
     y = "Probabilidad p"
   ) +
@@ -353,7 +355,7 @@ denom_mom <- Se_default + Sp_default - 1
 theta_mom_obs <- (t_bar_obs + Sp_default - 1) / denom_mom
 
 # Bootstrap Loop
-B <- 10000
+B <- 1000
 boot_ests <- numeric(B)
 
 for (i in 1:B) {
@@ -367,7 +369,7 @@ for (i in 1:B) {
 df_boot <- data.frame(theta_est = boot_ests)
 
 ggplot(df_boot, aes(x = theta_est)) +
-  geom_histogram(aes(y = after_stat(density)), bins = 10, fill = "lightblue", color = "black", alpha = 0.7) +
+  geom_histogram(aes(y = after_stat(density)), bins = 15, fill = "lightblue", color = "black", alpha = 0.7) +
   geom_vline(xintercept = theta_mom_obs, color = "red", linetype = "dashed", linewidth = 1) +
   labs(
     x = "Estimador MoM Bootstrap",
@@ -425,18 +427,13 @@ ic_bootstrap_percentil_2_9 <- function(n, Se = 0.9, Sp = 0.95, nivel = 0.95, p_e
 
 # ----------------------------- Grafico para los intervalos ------------------------------------
 
-# Creamos intervalos para cada n 
-ic_percentil<-data.frame(n = ns, inf = NA, sup = NA)
-
-for (i in 1:length(ns)){
-  muestra_2_9=rbinom(ns[i], 1, p_default)
-  est=mean(muestra_2_9)
-  tita_estimado=estimador_de_momentos(est, Se_default, Sp_default)
-  p_estimado=Se_default*tita_estimado+(1-Sp_default)*(1-tita_estimado)
-  n_intervalo_b_perc=data.frame(
-    n=numeric(100),
-    sup=numeric(100),
-    inf=numeric(100)
+# Creamos intervalos para cada n
+ic_percentil <- data.frame(n = ns, inf = NA, sup = NA)
+for (i in 1:length(ns)) {
+  n_intervalo_b_perc <- data.frame(
+    n = numeric(100),
+    sup = numeric(100),
+    inf = numeric(100)
   )
   for (j in 1:100) {
     muestra_2_9 <- rbinom(ns[i], 1, p_default)
@@ -523,6 +520,8 @@ for (i in 1:length(ns)) {
     ics_asintoticos <- rbind(ics_asintoticos, n_intervalo_asint)
   }
 }
+
+
 
 # ----------------------------- Grafico para los intervalos ------------------------------------
 
@@ -673,7 +672,9 @@ ggplot(datos_2_11_ip, aes(y = simulacion, x = inf, xend = sup, color = cubre)) +
     strip.text = element_text(face = "bold")
   )
 
-#Graficamos intervalos de confianza asintoticos para analizar el porcentaje de cobertura de cada n
+
+# Graficamos intervalos de confianza asintoticos para analizar el porcentaje de cobertura de cada n
+
 
 # Ordenamos para que los graficos aparezcan de menor a mayor n
 datos_2_11_asint$n_label <- reorder(datos_2_11_asint$n_label, datos_2_11_asint$n)
@@ -879,7 +880,6 @@ ggplot(Var_ECM_Sesgo_truncado, aes(x = n, y = value, color = variable)) +
   geom_point(size = 3) +
   scale_x_log10(breaks = c(10, 100, 1000)) +
   labs(
-    title = "Sesgo, Varianza y ECM del estimador truncado",
     x = "n", y = "Valor", color = "Medida"
   ) +
   theme_minimal(base_size = 14)
@@ -900,14 +900,21 @@ dist_asint_truncado <- data.frame(
 ggplot(dist_asint_truncado, aes(sample = dist)) +
   stat_qq() +
   stat_qq_line(color = "red", linewidth = 1) +
-  facet_wrap(~n, scales = "free") +
-  labs(title = "Distribución asintótica del estimador truncado") +
-  theme_minimal(base_size = 14)
+  facet_wrap(~n,
+             scales = "free",                              
+             labeller = labeller(
+             n = function(x) paste0("n = ", x))) +
+  labs(x="Theoretical Quantiles", 
+       y="Sample Quantiles") +
+  theme_bw() +
+  theme_minimal(base_size = 14) 
 
 # Visualizamos como se ve la distribución asintótica con un histograma
-ggplot(dist_asint_truncado, aes(x = dist)) +
+
+ggplot(dist_asint_truncado, aes(x = dist) ) +
   geom_histogram(bins = 30, color = "black", fill = "skyblue") +
-  facet_wrap(~n, scales = "free") +
+  facet_wrap(~n, scales = "free", labeller = labeller(
+    n = function(x) paste0("n = ", x))) +
   labs(
     x = "Distribución asintótica",
     y = "Frecuencia"
@@ -983,6 +990,7 @@ for (i in c(3, 5, 10, 25, 50, 100, 500, 1000, 5000)) {
   datos_test_3 <- rbind(datos_test_3, resultados)
 }
 
+# Resumen para ver si se acerca a 0.05
 resumen_nivel <- datos_test_3 %>%
   group_by(n_suma) %>%
   summarise(nivel_empirico = mean(rechazo))
