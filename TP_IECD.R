@@ -297,16 +297,6 @@ ggplot(df_ecm_punto6, aes(x = n, y = ecm, color = tipo, linetype = tipo)) +
     legend.background = element_rect(fill = "white", color = "black")
   )
 
-# Versión sin escala logarítmica
-ggplot(df_ecm_punto6, aes(x = n, y = ecm, color = tipo, linetype = tipo)) +
-  geom_line(linewidth = 1) +
-  geom_point() +
-  labs(
-    y = "ECM",
-    x = "n"
-  ) +
-  theme_bw()
-
 # ----------------------------- Ejercicio 7 ------------------------------------
 
 # Gráficos de Validación (Bias y Ajuste ECM)
@@ -372,8 +362,8 @@ ggplot(df_boot, aes(x = theta_est)) +
   geom_histogram(aes(y = after_stat(density)), bins = 15, fill = "lightblue", color = "black", alpha = 0.7) +
   geom_vline(xintercept = theta_mom_obs, color = "red", linetype = "dashed", linewidth = 1) +
   labs(
-    x = "Estimador MoM Bootstrap",
-    y = "Frecuencia"
+    x = "Theta",
+    y = "Densidad"
   ) +
   theme_bw()
 
